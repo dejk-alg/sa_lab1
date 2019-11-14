@@ -245,136 +245,11 @@ class LabGUI(tk.Frame):
     def add_output(self, inp='', new_line=True):
         self.output += str(inp)
         if new_line: self.output += '\n'
-    
-    
-    def get_subscript(self, symbol):
-        if symbol == 'i': return u'\u1d62'
-        return chr(ord(u'\u2080') + symbol)
-    
-    
-    def print_equation_3(self, coeff_matrix, lengths, degrees, coeff_name='λ', function_name='ψ', var_name='T'):
-                
-        ind = 0
-                
-        for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
-            
-            self.add_output()
-            self.add_output(
-                'Матриця коефіціентів {0}{1}'.format(coeff_name, self.get_subscript(eq_ind + 1)))
-            
-            coeff_matrix_part = coeff_matrix[ind: ind + length * degree_range].reshape(length, degree_range)
-            self.add_output(coeff_matrix_part)
-            ind += length * degree_range
-        
-        ind = 0
-        for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
-                        
-            for var_ind in range(length):
-                self.add_output()
-                
-                self.add_output(
-                    '{0}{1}{2}(x{1}{2}) = '.format(
-                        function_name, 
-                        self.get_subscript(eq_ind + 1), 
-                        self.get_subscript(var_ind + 1)), 
-                    new_line=False)
-                                
-                for degree in range(degree_range):
-                    
-                    if degree != 0:
-                        if coeff_matrix[ind] >= 0:
-                            self.add_output(' + ', new_line=False)
-                        else:
-                            self.add_output(' - ', new_line=False)
-                        
-                    self.add_output(
-                    '{0:.5} {1}{2}(x{3}{4})'.format(
-                        np.abs(coeff_matrix[ind]), var_name, self.get_subscript(degree),
-                        self.get_subscript(eq_ind + 1), self.get_subscript(var_ind + 1)), new_line=False)
-                    
-                    ind += 1
-    
-    
-    def print_equation_2(self, coeff_matrixes, target_ind=1, coeff_name='a', function_name='F', var_name='ψ'):
-        
-        for eq_ind, coeff_matrix in enumerate(coeff_matrixes):
-            self.add_output()
-            self.add_output(
-                    'Вектор коефіціентів {0}{1}{2}'.format(
-                        coeff_name, self.get_subscript(target_ind),
-                        self.get_subscript(eq_ind + 1)))
-            self.add_output(coeff_matrix)
-        
-        for eq_ind, coeff_matrix in enumerate(coeff_matrixes):
-            
-            self.add_output()
-                
-            self.add_output(
-                '{0}{1}{2}(x{2}) = '.format(
-                    function_name, self.get_subscript(target_ind),
-                    self.get_subscript(eq_ind + 1)), 
-                new_line=False)
-                                
-            for var_ind in range(coeff_matrix.shape[0]):
-                    
-                if var_ind != 0:
-                    if coeff_matrix[var_ind] >= 0:
-                        self.add_output(' + ', new_line=False)
-                    else:
-                        self.add_output(' - ', new_line=False)
-                        
-                self.add_output(
-                '{0:.5} {1}{2}{3}(x{2}{3})'.format(
-                    np.abs(coeff_matrix[var_ind]), var_name, self.get_subscript(eq_ind + 1),
-                    self.get_subscript(var_ind + 1)), new_line=False)
-                
-                
-    def print_equation_1(self, coeff_matrix, target_ind=1, coeff_name='c', function_name='Φ', var_name='F'):
-                    
-        self.add_output()
-        self.add_output('Вектор коефіціентів {0}'.format(coeff_name))
-        self.add_output(coeff_matrix)
-        self.add_output()
-                
-        self.add_output(
-            '{0}{1}(x) = '.format(
-                function_name, self.get_subscript(target_ind)), 
-            new_line=False)
-                                
-        for var_ind in range(coeff_matrix.shape[0]):
-                    
-            if var_ind != 0:
-                if coeff_matrix[var_ind] >= 0:
-                    self.add_output(' + ', new_line=False)
-                else:
-                    self.add_output(' - ', new_line=False)
-                        
-            self.add_output(
-                '{0:.5} {1}{2}{3}(x{2})'.format(
-                np.abs(coeff_matrix[var_ind]), var_name, self.get_subscript(var_ind + 1),
-                self.get_subscript(target_ind)), new_line=False)
-                        
-                
-    def output_diff(self, A, b, coeff, on_array=False):
-        
-        self.add_output()
-        self.add_output()
-        self.add_output("Нев'язка")
-
-        if on_array: 
-            diff = np.array([np.max(np.dot(A_inst, coeff_inst.T) - b) for A_inst, coeff_inst in zip(A, coeff)])
-            self.add_output('{0}'.format(diff))
-        else: 
-            diff = np.max(np.dot(A, coeff.T) - b)
-            self.add_output('{0:.5}'.format(diff))
-            
-        self.add_output()
-    
+                                           
     
     def run(self):
         
         self.output = ''
-        np.set_printoptions(precision=5)
         
         self.polynomial_var = {
             'chebyshev_first': 'T',
@@ -420,14 +295,14 @@ class LabGUI(tk.Frame):
         save_graph(b, np.dot(A_full, lambda_matrix_full.T))
         self.update_graph()
         
-        self.add_output('Третій ієрархічний рівень')
-        self.add_output('Формування функцій ψ')
-        
-        self.print_equation_3(
+        new_output = print_equation_3(
             coeff_matrix=lambda_matrix_full, lengths=feature_lengths, degrees=polynomial_degree_values, 
             coeff_name='λ', function_name='ψ', var_name=self.polynomial_var)
         
-        self.output_diff(A=A_full, b=b, coeff=lambda_matrix_full)
+        self.add_output(new_output)
+        
+        new_output = output_diff(A=A_full, b=b, coeff=lambda_matrix_full)
+        self.add_output(new_output)
 
         phi_values_full = []
         row_ind = 0
@@ -444,25 +319,23 @@ class LabGUI(tk.Frame):
             phi_values = np.array(phi_values).T
             phi_values_full.append(phi_values)
         
-        self.add_output('Другий ієрархічний рівень')
-        self.add_output('Формування функцій F')
-        
         a_matrixes = [np.linalg.lstsq(phi_values, y_variable)[0] for phi_values in phi_values_full]
             
-        self.print_equation_2(coeff_matrixes=a_matrixes, target_ind=self.y_coord.get())
+        new_output = print_equation_2(coeff_matrixes=a_matrixes, target_ind=self.y_coord.get())
+        self.add_output(new_output)
         
-        self.output_diff(A=phi_values_full, b=y_variable, coeff=a_matrixes, on_array=True)
+        new_output = output_diff(A=phi_values_full, b=y_variable, coeff=a_matrixes, on_array=True)
+        self.add_output(new_output)
         
         F_values = np.array([phi_values @ a_matrix.T for phi_values, a_matrix in zip(phi_values_full, a_matrixes)]).T
-
-        self.add_output('Перший ієрархічний рівень')
-        self.add_output('Формування функцій Φ')
         
         c_matrix = np.linalg.lstsq(F_values, y_variable)[0]
         
-        self.print_equation_1(coeff_matrix=c_matrix, target_ind=self.y_coord.get())
+        new_output = print_equation_1(coeff_matrix=c_matrix, target_ind=self.y_coord.get())
+        self.add_output(new_output)
         
-        self.output_diff(A=F_values, b=y_variable, coeff=c_matrix)
+        new_output = output_diff(A=F_values, b=y_variable, coeff=c_matrix)
+        self.add_output(new_output)
         
         #approx_values = F_values @ c_matrix.T
         

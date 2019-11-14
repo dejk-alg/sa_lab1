@@ -1,6 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.set_printoptions(precision=5)
+
+def get_subscript(symbol):
+    if symbol == 'i': return u'\u1d62'
+    return chr(ord(u'\u2080') + symbol)
+
 
 def read_input_from_file(features_filename, labels_filename, rows_limit=50):
     
@@ -233,3 +239,126 @@ def save_graph(y, approx, filename='graph.png'):
     n = np.arange(len(y))
     plt.plot(n, approx, n, y)
     plt.savefig('graph.png', bbox_inches = 'tight')
+    
+    
+def print_equation_3(coeff_matrix, lengths, degrees, coeff_name='λ', function_name='ψ', var_name='T'):
+        
+    output = ''
+        
+    output += 'Третій ієрархічний рівень\n'
+    output += 'Формування функцій ψ\n'
+        
+    ind = 0
+                
+    for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
+            
+        output += '\nМатриця коефіціентів {0}{1}\n'.format(coeff_name, get_subscript(eq_ind + 1))
+            
+        coeff_matrix_part = coeff_matrix[ind: ind + length * degree_range].reshape(length, degree_range)
+        output += str(coeff_matrix_part)
+        output += '\n'
+        ind += length * degree_range
+        
+    ind = 0
+    for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
+                        
+        for var_ind in range(length):
+            output += '\n{0}{1}{2}(x{1}{2}) = '.format(
+                function_name, 
+                get_subscript(eq_ind + 1), 
+                get_subscript(var_ind + 1))
+                                
+            for degree in range(degree_range):
+                    
+                if degree != 0:
+                    if coeff_matrix[ind] >= 0:
+                        output += ' + '
+                    else:
+                        output += ' - '
+                        
+                output += '{0:.5} {1}{2}(x{3}{4})'.format(
+                    np.abs(coeff_matrix[ind]), var_name, get_subscript(degree),
+                    get_subscript(eq_ind + 1), get_subscript(var_ind + 1))
+                    
+                ind += 1
+                    
+    return output
+
+
+def print_equation_2(coeff_matrixes, target_ind=1, coeff_name='a', function_name='F', var_name='ψ'):
+        
+    output = ''
+    output += 'Другий ієрархічний рівень\n'
+    output += 'Формування функцій F\n'
+        
+    for eq_ind, coeff_matrix in enumerate(coeff_matrixes):
+        output += '\nВектор коефіціентів {0}{1}{2}'.format(
+            coeff_name, get_subscript(target_ind),
+            get_subscript(eq_ind + 1))
+            
+        output += '\n'
+        output += str(coeff_matrix)
+        output += '\n'
+        
+    for eq_ind, coeff_matrix in enumerate(coeff_matrixes):
+            
+        output += '\n{0}{1}{2}(x{2}) = '.format(
+            function_name, get_subscript(target_ind),
+            get_subscript(eq_ind + 1))
+                                
+        for var_ind in range(coeff_matrix.shape[0]):
+                    
+            if var_ind != 0:
+                if coeff_matrix[var_ind] >= 0:
+                    output += ' + '
+                else:
+                    output += ' - '
+                        
+            output += '{0:.5} {1}{2}{3}(x{2}{3})'.format(
+                np.abs(coeff_matrix[var_ind]), var_name, get_subscript(eq_ind + 1),
+                get_subscript(var_ind + 1))
+                
+    return output
+
+
+def print_equation_1(coeff_matrix, target_ind=1, coeff_name='c', function_name='Φ', var_name='F'):
+        
+    output = ''
+        
+    output += 'Перший ієрархічний рівень\n'
+    output += 'Формування функцій Φ\n'
+        
+    output += '\nВектор коефіціентів {0}\n{1}\n'.format(coeff_name, coeff_matrix)
+    output += '{0}{1}(x) = '.format(function_name, get_subscript(target_ind))
+                                
+    for var_ind in range(coeff_matrix.shape[0]):
+                    
+        if var_ind != 0:
+            if coeff_matrix[var_ind] >= 0:
+                output += ' + '
+            else:
+                output += ' - '
+                        
+        output += '{0:.5} {1}{2}{3}(x{2})'.format(
+            np.abs(coeff_matrix[var_ind]), var_name, get_subscript(var_ind + 1),
+            get_subscript(target_ind))
+            
+    return output
+
+
+def output_diff(A, b, coeff, on_array=False):
+    
+    output = ''
+    output += "\nНев'язка\n"
+
+    if on_array: 
+        diff = np.array([np.max(np.dot(A_inst, coeff_inst.T) - b) for A_inst, coeff_inst in zip(A, coeff)])
+        output += str(diff)
+        output += '\n'
+    else: 
+        diff = np.max(np.dot(A, coeff.T) - b)
+        output += '{0:.5}\n'.format(diff)
+            
+    output += '\n'
+    
+    return output
