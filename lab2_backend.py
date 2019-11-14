@@ -114,16 +114,19 @@ def default_input():
     return x, y
 
 
-def normalize_data(x):
+def normalize_data(x, min_max_data=False):
     min_values = np.min(x, axis=0)
     max_values = np.max(x, axis=0)
     x = (x - min_values) / (max_values - min_values)
-    if np.any(x < 0): print (x)
+    if min_max_data:
+        return x, (min_values, max_values)
     return x
 
 
-def denormalize_data(x, min_values, max_values):
+def denormalize_data(x, norm_values):
+    min_values, max_values = norm_values
     x = x * (max_values - min_values) + min_values
+    return x
 
 
 def polynomial(polynomial_type):
@@ -224,7 +227,7 @@ def create_equation_matrix(x, polynomial_type='сhebyshev_first', polynomial_deg
                 
     return A
 
-def save_graph(y, approx):
+def save_graph(y, approx, filename='graph.png'):
     
     plt.figure(figsize=(20,10))
     n = np.arange(len(y))

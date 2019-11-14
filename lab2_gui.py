@@ -18,17 +18,19 @@ class LabGUI(tk.Frame):
         self.init_label_filename()
         
         self.init_x_leng()
-        self.init_y_leng()
         
         self.init_choose_polynomial()
         self.init_create_pads()
         
         self.init_polynomial_degrees()
         self.init_function_weight()
+        
         self.init_y_coord()
         
         self.init_run_button()
         self.init_default_checkbutton()
+        self.init_y_checkbutton()
+
         self.init_all_labels()
         self.init_output_label()
         self.init_graph_canvas()
@@ -77,20 +79,40 @@ class LabGUI(tk.Frame):
     def init_button(self, text, column, row, width, height, columnspan=1, rowspan=1, command=None):
         butt = tk.Button(self.parent, text=text, width=width, height=height, command=command)
         butt.grid(column=column, row=row, columnspan=columnspan, rowspan=rowspan)
+        
+        
+    def init_checkbutton(self, text, column, row, columnspan=1, rowspan=1, variable=None):
+        butt = tk.Checkbutton(self.parent, text=text, variable=variable)
+        butt.grid(column=column, row=row, columnspan=columnspan, rowspan=rowspan)
     
     #Buttons
     
     def init_run_button(self):
-        self.init_button(text = 'Розрахувати', width=10, height=1, 
-                         column=11, row=5, rowspan=2, columnspan=2,
-                         command=self.run)
+        self.init_button(
+            text = 'Розрахувати', width=10, height=1, 
+            column=11, row=6, rowspan=2, columnspan=2,
+            command=self.run
+        )
     
     
     def init_default_checkbutton(self):
         self.default_data = tk.BooleanVar(value=True)
-        checkbutton = tk.Checkbutton(
-            self.parent, text='Стандартні значення', variable=self.default_data)
-        checkbutton.grid(column=1, row=4)
+        
+        self.init_checkbutton(
+            text = 'Стандартні значення', 
+            column=1, row=4,
+            variable=self.default_data
+        )
+        
+    def init_y_checkbutton(self):
+        
+        self.normalize_y = tk.BooleanVar(value=True)
+        
+        self.init_checkbutton(
+            text = 'Нормалізувати y на графіку', 
+            column=11, row=5,
+            variable=self.normalize_y
+        )
     
     # Labels
     
@@ -116,6 +138,9 @@ class LabGUI(tk.Frame):
         self.init_label(text = 'Результат', column=0, row=8, columnspan=6)
         self.init_label(text = 'Графік', column=7, row=8, columnspan=6)  
         
+        self.err_output = tk.StringVar(value='Значення похибки')
+        self.init_variable_label(variable=self.err_output, column=8, row=11, columnspan=6)
+        
     
     def init_output_label(self):
         
@@ -128,7 +153,7 @@ class LabGUI(tk.Frame):
     
     
     def init_graph_canvas(self):
-        self.canvas_size = (700, 450)
+        self.canvas_size = (700, 420)
         self.graph_canvas = tk.Canvas(self.parent, bg="#fff", height=self.canvas_size[1], width=self.canvas_size[0])
         self.graph_canvas.grid(column=8, row=10, columnspan=6, sticky=tk.NW)
     
@@ -181,12 +206,6 @@ class LabGUI(tk.Frame):
             self.init_label_with_entry(
                 text='Розмірність x' + str(ind+1), column=3, row=ind+2,
                 variable=var)
-            
-    def init_y_leng(self):
-        self.y_leng = tk.IntVar(value=4)
-        self.init_label_with_entry(
-            text='Розмірність y', column=3, row=5,
-            variable=self.y_leng)
     
     def init_polynomial_degrees(self):
         self.polynomial_degrees = [tk.IntVar(value=3) for _ in range(3)]
@@ -236,19 +255,20 @@ class LabGUI(tk.Frame):
     def print_equation_3(self, coeff_matrix, lengths, degrees, coeff_name='λ', function_name='ψ', var_name='T'):
                 
         ind = 0
+                
         for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
+            
             self.add_output()
             self.add_output(
                 'Матриця коефіціентів {0}{1}'.format(coeff_name, self.get_subscript(eq_ind + 1)))
+            
             coeff_matrix_part = coeff_matrix[ind: ind + length * degree_range].reshape(length, degree_range)
             self.add_output(coeff_matrix_part)
             ind += length * degree_range
         
         ind = 0
         for eq_ind, (length, degree_range) in enumerate(zip(lengths, degrees)):
-            
-            #ind = 0
-            
+                        
             for var_ind in range(length):
                 self.add_output()
                 
@@ -334,7 +354,7 @@ class LabGUI(tk.Frame):
                 np.abs(coeff_matrix[var_ind]), var_name, self.get_subscript(var_ind + 1),
                 self.get_subscript(target_ind)), new_line=False)
                         
-    
+                
     def output_diff(self, A, b, coeff, on_array=False):
         
         self.add_output()
@@ -378,9 +398,12 @@ class LabGUI(tk.Frame):
         
         polynomial_degree_values = [polynomial_degree.get() for polynomial_degree in self.polynomial_degrees]
                 
-        x, y = [normalize_data(item) for item in data]
+        x, y = data
                 
         y_variable = y[:, self.y_coord.get() - 1]
+        
+        x = normalize_data(x)
+        y_variable, norm_values = normalize_data(y_variable, min_max_data = True)
         
         b = np.empty(y.shape[0], dtype=np.float32)
         
@@ -390,7 +413,7 @@ class LabGUI(tk.Frame):
         A_full = create_equation_matrix_simult(
             x, polynomial_type=self.polynomial_type.get(), 
             polynomial_degrees=polynomial_degree_values,
-            feature_lengths=(2, 2, 3))
+            feature_lengths=feature_lengths)
                 
         lambda_matrix_full = np.linalg.lstsq(A_full, b)[0]
                                         
@@ -441,12 +464,21 @@ class LabGUI(tk.Frame):
         
         self.output_diff(A=F_values, b=y_variable, coeff=c_matrix)
         
-        approx_values = F_values @ c_matrix.T
+        #approx_values = F_values @ c_matrix.T
         
         lambda_matrix_y = np.linalg.lstsq(A_full, y_variable)[0]
-                               
-        save_graph(y_variable, np.dot(A_full, lambda_matrix_y.T)) 
+        
+        approx_values = np.dot(A_full, lambda_matrix_y.T)
+        
+        if not self.normalize_y.get():
+            y_variable = denormalize_data(y_variable, norm_values)
+            approx_values = denormalize_data(approx_values, norm_values)
+        
+        save_graph(y_variable, approx_values) 
         self.update_graph()
+        
+        err_value = np.max(np.abs(y_variable - approx_values))
+        self.err_output.set('Значення похибки: {0:.5}'.format(err_value))
                 
         self.set_output_text(self.output)
         
