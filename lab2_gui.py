@@ -271,15 +271,17 @@ class LabGUI(tk.Frame):
         feature_ranges = get_ranges(feature_lengths)
         feature_amount = len(feature_lengths)
         
-        polynomial_degree_values = [polynomial_degree.get() for polynomial_degree in self.polynomial_degrees]
+        polynomial_degree_values = np.array([polynomial_degree.get() for polynomial_degree in self.polynomial_degrees])
                 
         x, y = data
                 
         y_variable = y[:, self.y_coord.get() - 1]
         
         x = normalize_data(x)
+        print(y_variable[:10])
+
         y_variable, norm_values = normalize_data(y_variable, min_max_data = True)
-        
+                
         b = np.empty(y.shape[0], dtype=np.float32)
         
         if self.weight_average: b = y.mean(axis=1)
@@ -289,9 +291,48 @@ class LabGUI(tk.Frame):
             x, polynomial_type=self.polynomial_type.get(), 
             polynomial_degrees=polynomial_degree_values,
             feature_lengths=feature_lengths)
-                
+
         lambda_matrix_full = np.linalg.lstsq(A_full, b)[0]
+            
+        err = np.max(np.abs(A_full @ lambda_matrix_full - b))
+        
+        while err > 0.4:
+            
+            change = False
+            
+            for i in range(3):
+                
+                new_polynomial_degree_values = polynomial_degree_values.copy()
+                new_polynomial_degree_values[i] += 1
+                
+                A_full = create_equation_matrix_simult(
+                    x, polynomial_type=self.polynomial_type.get(), 
+                    polynomial_degrees=new_polynomial_degree_values,
+                    feature_lengths=feature_lengths)
+
+                lambda_matrix_full = np.linalg.lstsq(A_full, b)[0]
+
+                err_new = np.max(np.abs(A_full @ lambda_matrix_full - b))
+                
+                if (err - err_new) / err > 0.05:
+                    polynomial_degree_values = new_polynomial_degree_values
+                    err = err_new
+                    change = True
+                    
+            if not change: break
+            
+            
+        for polynomial_degree, value in zip(self.polynomial_degrees, polynomial_degree_values):
+            polynomial_degree.set(value)
                                         
+                
+        A_full = create_equation_matrix_simult(
+            x, polynomial_type=self.polynomial_type.get(), 
+            polynomial_degrees=polynomial_degree_values,
+            feature_lengths=feature_lengths)
+
+        lambda_matrix_full = np.linalg.lstsq(A_full, b)[0]
+                
         save_graph(b, np.dot(A_full, lambda_matrix_full.T))
         self.update_graph()
         
@@ -299,9 +340,6 @@ class LabGUI(tk.Frame):
             coeff_matrix=lambda_matrix_full, lengths=feature_lengths, degrees=polynomial_degree_values, 
             coeff_name='λ', function_name='ψ', var_name=self.polynomial_var)
         
-        self.add_output(new_output)
-        
-        new_output = output_diff(A=A_full, b=b, coeff=lambda_matrix_full)
         self.add_output(new_output)
 
         phi_values_full = []
@@ -345,6 +383,7 @@ class LabGUI(tk.Frame):
         
         if not self.normalize_y.get():
             y_variable = denormalize_data(y_variable, norm_values)
+            print(y_variable[:10])
             approx_values = denormalize_data(approx_values, norm_values)
         
         save_graph(y_variable, approx_values) 

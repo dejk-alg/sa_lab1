@@ -3,6 +3,19 @@ import matplotlib.pyplot as plt
 
 np.set_printoptions(precision=5)
 
+
+def solve(A, b, eps=1e-5):
+    alpha = 0.1
+    
+    m, n = A.shape
+    x = np.ones(n) * 0.1
+    
+    while ((A @ x - b) @ A.T > eps):
+        x = x - 2 * alpha * (A @ x - b) @ A.T 
+        
+    return x
+
+
 def get_subscript(symbol):
     if symbol == 'i': return u'\u1d62'
     return chr(ord(u'\u2080') + symbol)
@@ -237,7 +250,8 @@ def save_graph(y, approx, filename='graph.png'):
     
     plt.figure(figsize=(20,10))
     n = np.arange(len(y))
-    plt.plot(n, approx, n, y)
+    plt.plot(n, approx, 'r', n, y, 'b')
+    plt.legend(['наближення', 'цільова функція'])
     plt.savefig('graph.png', bbox_inches = 'tight')
     
     
